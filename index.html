@@ -12,8 +12,8 @@
     <!-- Header with Status -->
     <header class="header">
       <div class="status-section">
-        <div id="status-light" class="status-light idle"></div>
-        <span id="status-text" class="status-text">IDLE</span>
+        <div id="status-light" class="status-light idle"></div id="status-text>
+        <span" class="status-text">IDLE</span>
       </div>
       <h1 class="title">MISSION CONTROL</h1>
     </header>
@@ -53,7 +53,46 @@
     </section>
   </div>
 
-  <script src="socket.io.js"></script>
-  <script src="app.js"></script>
+  <script>
+    const GIST_URL = 'https://gist.githubusercontent.com/lanceistough/a7175de1aa3a9f9dfce5f71806239bfd/raw';
+    
+    async function loadState() {
+      try {
+        const resp = await fetch(GIST_URL + '?t=' + Date.now());
+        const state = await resp.json();
+        
+        document.getElementById('status-light').className = 'status-light ' + state.status;
+        document.getElementById('status-text').textContent = state.status.toUpperCase();
+        document.getElementById('current-task').textContent = state.currentTask || 'No active task';
+        
+        const queueEl = document.getElementById('queue');
+        queueEl.innerHTML = '';
+        if (state.queue && state.queue.length > 0) {
+          document.getElementById('empty-queue').classList.remove('visible');
+          state.queue.forEach((task, i) => {
+            queueEl.innerHTML += `<div class="queue-item"><div class="queue-item-number">#${i+1}</div><div class="queue-item-text">${task}</div></div>`;
+          });
+        } else {
+          document.getElementById('empty-queue').classList.add('visible');
+        }
+        
+        const todoEl = document.getElementById('todo-list');
+        todoEl.innerHTML = '';
+        if (state.todos && state.todos.length > 0) {
+          document.getElementById('empty-todos').classList.remove('visible');
+          state.todos.forEach(todo => {
+            todoEl.innerHTML += `<div class="todo-item ${todo.completed ? 'completed' : ''}"><div class="todo-checkbox ${todo.completed ? 'checked' : ''}"></div><div class="todo-text">${todo.text}</div></div>`;
+          });
+        } else {
+          document.getElementById('empty-todos').classList.add('visible');
+        }
+      } catch (e) {
+        console.error('Failed to load state:', e);
+      }
+    }
+    
+    loadState();
+    setInterval(loadState, 10000);
+  </script>
 </body>
 </html>
