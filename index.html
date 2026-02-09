@@ -4,77 +4,55 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Mission Control</title>
-  <meta http-equiv="refresh" content="5">
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
   <div class="container">
+    <!-- Header with Status -->
     <header class="header">
       <div class="status-section">
         <div id="status-light" class="status-light idle"></div>
-        <span id="status-text" class="status-text">LOADING...</span>
+        <span id="status-text" class="status-text">IDLE</span>
       </div>
       <h1 class="title">MISSION CONTROL</h1>
     </header>
 
+    <!-- Current Task -->
     <section class="current-task">
       <h2 class="section-title">CURRENTLY WORKING ON</h2>
       <div id="current-task" class="task-display">
-        Loading...
+        No active task
       </div>
     </section>
 
+    <!-- Queue -->
     <section class="queue-section">
       <h2 class="section-title">UP NEXT</h2>
-      <div id="queue" class="queue-grid"></div>
-      <div id="empty-queue" class="empty-queue">Queue is empty</div>
+      <div id="queue" class="queue-grid">
+        <!-- Tasks will be inserted here -->
+      </div>
+      <div id="empty-queue" class="empty-queue">
+        Queue is empty
+      </div>
     </section>
 
+    <!-- To-Do List -->
     <section class="todo-section">
       <h2 class="section-title">TO-DO LIST</h2>
-      <div id="todo-list" class="todo-list"></div>
-      <div id="empty-todos" class="empty-queue">No tasks yet</div>
+      <div class="todo-input-wrapper">
+        <input type="text" id="todo-input" class="todo-input" placeholder="Add a new task...">
+        <button id="todo-add" class="todo-add-btn">+</button>
+      </div>
+      <div id="todo-list" class="todo-list">
+        <!-- Todos will be inserted here -->
+      </div>
+      <div id="empty-todos" class="empty-queue">
+        No tasks yet
+      </div>
     </section>
   </div>
 
-  <script>
-    async function loadState() {
-      try {
-        const resp = await fetch('https://script.google.com/macros/s/AKfycbz7XxXxXxXxXxXxXxXxXxXxXxXxXxXxXxXxXxXxXxXxXxXx/exec');
-        const state = await resp.json();
-        
-        document.getElementById('status-light').className = 'status-light ' + state.status;
-        document.getElementById('status-text').textContent = state.status.toUpperCase();
-        document.getElementById('current-task').textContent = state.currentTask || 'No active task';
-        
-        const queueEl = document.getElementById('queue');
-        queueEl.innerHTML = '';
-        if (state.queue && state.queue.length > 0) {
-          document.getElementById('empty-queue').classList.remove('visible');
-          state.queue.forEach((task, i) => {
-            queueEl.innerHTML += `<div class="queue-item"><div class="queue-item-number">#${i+1}</div><div class="queue-item-text">${task}</div></div>`;
-          });
-        } else {
-          document.getElementById('empty-queue').classList.add('visible');
-        }
-        
-        const todoEl = document.getElementById('todo-list');
-        todoEl.innerHTML = '';
-        if (state.todos && state.todos.length > 0) {
-          document.getElementById('empty-todos').classList.remove('visible');
-          state.todos.forEach(todo => {
-            todoEl.innerHTML += `<div class="todo-item ${todo.completed ? 'completed' : ''}"><div class="todo-checkbox ${todo.completed ? 'checked' : ''}"></div><div class="todo-text">${todo.text}</div></div>`;
-          });
-        } else {
-          document.getElementById('empty-todos').classList.add('visible');
-        }
-      } catch (e) {
-        console.error('Failed to load state:', e);
-      }
-    }
-    
-    loadState();
-    setInterval(loadState, 5000);
-  </script>
+  <script src="socket.io.js"></script>
+  <script src="app.js"></script>
 </body>
 </html>
