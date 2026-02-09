@@ -1,5 +1,4 @@
-// Connect to server via Socket.io
-const socket = io();
+const GIST_URL = 'https://gist.githubusercontent.com/lanceistough/a7175de1aa3a9f9dfce5f71806239bfd/raw';
 
 // DOM elements
 const statusLight = document.getElementById('status-light');
@@ -19,11 +18,18 @@ const statusNames = {
   stuck: 'STUCK'
 };
 
+// Helper to escape HTML
+function escapeHtml(text) {
+  const div = document.createElement('div');
+  div.textContent = text;
+  return div.innerHTML;
+}
+
 // Update UI with new state
 function updateUI(state) {
   // Update status light
   statusLight.className = 'status-light ' + state.status;
-  statusText.textContent = statusNames[state.status];
+  statusText.textContent = statusNames[state.status] || state.status.toUpperCase();
 
   // Update current task
   if (state.currentTask) {
@@ -42,7 +48,7 @@ function updateUI(state) {
       item.className = 'queue-item';
       item.innerHTML = `
         <div class="queue-item-number">#${index + 1}</div>
-        <div class="queue-item-text">${task}</div>
+        <div class="queue-item-text">${escapeHtml(task)}</div>
       `;
       queue.appendChild(item);
     });
@@ -59,9 +65,8 @@ function updateUI(state) {
       const item = document.createElement('div');
       item.className = 'todo-item' + (todo.completed ? ' completed' : '');
       item.innerHTML = `
-        <div class="todo-checkbox ${todo.completed ? 'checked' : ''}" onclick="toggleTodo('${todo.id}')"></div>
+        <div class="todo-checkbox ${todo.completed ? 'checked' : ''}"></div>
         <div class="todo-text">${escapeHtml(todo.text)}</div>
-        <button class="todo-delete" onclick="deleteTodo('${todo.id}')">×</button>
       `;
       todoList.appendChild(item);
     });
@@ -70,53 +75,18 @@ function updateUI(state) {
   }
 }
 
-// Helper to escape HTML
-function escapeHtml(text) {
-  const div = document.createElement('div');
-  div.textContent = text;
-  return div.innerHTML;
+// Load state from Gist
+async function loadState() {
+  try {
+    const resp = await fetch(GIST_URL + '?t=' + Date.now());
+    const state = await resp.json();
+    updateUI(state);
+  } catch (e) {
+    console.error('Failed to load state:', e);
+  }
 }
-
-// Todo functions
-async function addTodo() {
-  const text = todoInput.value.trim();
-  if (!text) return;
-
-  await fetch('/api/todos', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ text })
-  });
-
-  todoInput.value = '';
-}
-
-async function toggleTodo(id) {
-  await fetch(`/api/todos/${id}/toggle`, { method: 'POST' });
-}
-
-async function deleteTodo(id) {
-  await fetch(`/api/todos/${id}`, { method: 'DELETE' });
-}
-
-// Event listeners
-todoAddBtn.addEventListener('click', addTodo);
-todoInput.addEventListener('keypress', (e) => {
-  if (e.key === 'Enter') addTodo();
-});
-
-// Listen for real-time updates
-socket.on('update', (state) => {
-  console.log('State updated:', state);
-  updateUI(state);
-});
 
 // Initial load
-fetch('/api/state')
-  .then(res => res.json())
-  .then(state => {
-    updateUI(state);
-  })
-  .catch(err => {
-    console.error('Failed to load state:', err);
-  });
+loadState();
+// Refresh every 10 seconds
+setInterval(loadState, 10000);
