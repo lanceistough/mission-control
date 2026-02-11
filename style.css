@@ -109,13 +109,13 @@ body {
 
 /* 3-Column Layout */
 .columns-container {
-  display: flex;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
   gap: 16px;
   align-items: flex-start;
 }
 
 .column {
-  flex: 1;
   min-width: 0; /* Prevent overflow */
 }
 
