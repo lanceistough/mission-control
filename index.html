@@ -5,94 +5,124 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Mission Control</title>
   <link rel="stylesheet" href="style.css">
-  <meta http-equiv="refresh" content="10">
 </head>
 <body>
-  <div class="container">
-    <!-- Header with Status -->
-    <header class="header">
-      <div class="status-section">
-        <div id="status-light" class="status-light idle"></div>
-        <span id="status-text" class="status-text">IDLE</span>
-      </div>
-      <h1 class="title">MISSION CONTROL</h1>
-    </header>
+  <!-- Password Protection -->
+  <div id="password-overlay">
+    <div class="password-box">
+      <h2>MISSION CONTROL</h2>
+      <input type="password" id="pass-input" class="password-input" placeholder="Enter Password">
+      <button onclick="checkPass()" class="btn">Login</button>
+    </div>
+  </div>
 
-    <!-- Current Task -->
-    <section class="current-task glass-card">
-      <h2 class="section-title">CURRENTLY WORKING ON</h2>
-      <div id="current-task" class="task-display">
-        No active task
-      </div>
-    </section>
+  <div id="main-content" style="display:none">
+    <div class="container">
+      <header class="header">
+        <div class="status-section">
+          <div id="status-light" class="status-light idle"></div>
+          <span id="status-text" class="status-text">IDLE</span>
+        </div>
+        <h1 class="title">CLEO OPS</h1>
+      </header>
 
-    <!-- Queue -->
-    <section class="queue-section glass-card">
-      <h2 class="section-title">UP NEXT</h2>
-      <div id="queue" class="queue-grid">
-        <!-- Tasks will be inserted here -->
-      </div>
-      <div id="empty-queue" class="empty-queue">
-        Queue is empty
-      </div>
-    </section>
+      <div class="columns-container">
+        <!-- Column 1: Queue -->
+        <div class="column glass-card">
+          <span class="section-title">Queue</span>
+          <div id="queue-list" class="task-list"></div>
+          <div id="queue-empty" class="empty-msg">No tasks queued</div>
+        </div>
 
-    <!-- To-Do List -->
-    <section class="todo-section glass-card">
-      <h2 class="section-title">TO-DO LIST</h2>
-      <div class="todo-input-wrapper">
-        <input type="text" id="todo-input" class="todo-input" placeholder="Add a new task...">
-        <button id="todo-add" class="todo-add-btn">+</button>
+        <!-- Column 2: Active -->
+        <div class="column glass-card">
+          <span class="section-title">Active</span>
+          <div id="active-list" class="task-list"></div>
+          <div id="active-empty" class="empty-msg">System idle</div>
+        </div>
+
+        <!-- Column 3: Completed -->
+        <div class="column glass-card">
+          <span class="section-title">Completed</span>
+          <div id="completed-list" class="task-list"></div>
+          <div id="completed-empty" class="empty-msg">No tasks finished</div>
+        </div>
       </div>
-      <div id="todo-list" class="todo-list">
-        <!-- Todos will be inserted here -->
-      </div>
-      <div id="empty-todos" class="empty-queue">
-        No tasks yet
-      </div>
-    </section>
+    </div>
   </div>
 
   <script>
     const GIST_URL = 'https://gist.githubusercontent.com/lanceistough/a7175de1aa3a9f9dfce5f71806239bfd/raw';
-    
+    const PASS_HASH = 'GrandpaLeo23!'; // Plaintext check for simplicity as requested
+
+    function checkPass() {
+      const input = document.getElementById('pass-input').value;
+      if (input === PASS_HASH) {
+        localStorage.setItem('mc_auth', 'true');
+        showDashboard();
+      } else {
+        alert('Access Denied');
+      }
+    }
+
+    function showDashboard() {
+      document.getElementById('password-overlay').style.display = 'none';
+      document.getElementById('main-content').style.display = 'block';
+      loadState();
+      setInterval(loadState, 10000);
+    }
+
+    if (localStorage.getItem('mc_auth') === 'true') {
+      showDashboard();
+    }
+
     async function loadState() {
       try {
         const resp = await fetch(GIST_URL + '?t=' + Date.now());
         const state = await resp.json();
         
-        document.getElementById('status-light').className = 'status-light ' + state.status;
-        document.getElementById('status-text').textContent = state.status.toUpperCase();
-        document.getElementById('current-task').textContent = state.currentTask || 'No active task';
+        // Update Status
+        document.getElementById('status-light').className = 'status-light ' + (state.status || 'idle');
+        document.getElementById('status-text').textContent = (state.status || 'idle').toUpperCase();
         
-        const queueEl = document.getElementById('queue');
-        queueEl.innerHTML = '';
-        if (state.queue && state.queue.length > 0) {
-          document.getElementById('empty-queue').classList.remove('visible');
-          state.queue.forEach((task, i) => {
-            queueEl.innerHTML += `<div class="queue-item"><div class="queue-item-number">#${i+1}</div><div class="queue-item-text">${task}</div></div>`;
-          });
-        } else {
-          document.getElementById('empty-queue').classList.add('visible');
-        }
+        // Helper to render lists
+        const renderList = (elId, emptyId, items) => {
+          const el = document.getElementById(elId);
+          const empty = document.getElementById(emptyId);
+          el.innerHTML = '';
+          if (items && items.length > 0) {
+            empty.style.display = 'none';
+            items.forEach(item => {
+              const div = document.createElement('div');
+              div.className = 'task-item';
+              div.textContent = typeof item === 'string' ? item : item.text;
+              el.appendChild(div);
+            });
+          } else {
+            empty.style.display = 'block';
+          }
+        };
+
+        // We use the 'todos' field from gist to populate these columns
+        // Logic: 
+        // 1. completed: true -> Completed
+        // 2. active: true or in 'currentTask' -> Active
+        // 3. others -> Queue
         
-        const todoEl = document.getElementById('todo-list');
-        todoEl.innerHTML = '';
-        if (state.todos && state.todos.length > 0) {
-          document.getElementById('empty-todos').classList.remove('visible');
-          state.todos.forEach(todo => {
-            todoEl.innerHTML += `<div class="todo-item ${todo.completed ? 'completed' : ''}"><div class="todo-checkbox ${todo.completed ? 'checked' : ''}"></div><div class="todo-text">${todo.text}</div></div>`;
-          });
-        } else {
-          document.getElementById('empty-todos').classList.add('visible');
-        }
+        const todos = state.todos || [];
+        const completed = todos.filter(t => t.completed);
+        const active = [];
+        if (state.currentTask) active.push({text: state.currentTask});
+        const queue = todos.filter(t => !t.completed);
+
+        renderList('queue-list', 'queue-empty', queue);
+        renderList('active-list', 'active-empty', active);
+        renderList('completed-list', 'completed-empty', completed);
+
       } catch (e) {
-        console.error('Failed to load state:', e);
+        console.error('State load failed', e);
       }
     }
-    
-    loadState();
-    setInterval(loadState, 10000);
   </script>
 </body>
 </html>
